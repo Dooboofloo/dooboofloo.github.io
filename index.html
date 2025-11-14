@@ -97,6 +97,7 @@
             }
 
             let activeCell = null;
+            let wasTopHalf = null;
 
             document.querySelectorAll('.cell').forEach(cell => {
                 const topOverlay = cell.querySelector('.highlight-top');
@@ -111,8 +112,10 @@
                     const midY = rect.height / 2;
 
                     if (relativeY < midY) {
+                        wasTopHalf = true;
                         topOverlay.style.opacity = 1;
                     } else {
+                        wasTopHalf = false;
                         bottomOverlay.style.opacity = 1;
 
                         // Only trigger hold reset if held in bottom half
@@ -149,6 +152,7 @@
                     }
                     isHolding = false;
                     activeCell = null;
+                    wasTopHalf = null;
                 };
 
                 const handleLeave = () => {
@@ -156,11 +160,27 @@
                     topOverlay.style.opacity = 0;
                     bottomOverlay.style.opacity = 0;
                     activeCell = null;
+                    wasTopHalf = null;
+                };
+
+                const handleMove = e => {
+                    const rect = cell.getBoundingClientRect();
+                    const relativeY = e.clientY - rect.top;
+                    const midY = rect.height / 2;
+                    
+                    if ((wasTopHalf && relativeY >= midY) || (!wasTopHalf && relativeY < midY)) {
+                        clearTimeout(holdTimeout);
+                        topOverlay.style.opacity = 0;
+                        bottomOverlay.style.opacity = 0;
+                        activeCell = null;
+                        wasTopHalf = null;
+                    }
                 };
 
                 cell.addEventListener('mousedown', handleDown);
                 cell.addEventListener('mouseup', handleUp);
                 cell.addEventListener('mouseleave', handleLeave);
+                cell.addEventListener('mousemove', handleMove);
                 
                 cell.addEventListener('touchstart', e => { e.preventDefault(); handleDown(e.touches[0]); });
                 cell.addEventListener('touchend',   e => { e.preventDefault(); handleUp(e.changedTouches[0]); });
