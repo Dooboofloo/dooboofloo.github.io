@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mana-counter-cache-v1';
+const CACHE_NAME = 'mana-tracker-cache-v2';
 const ASSETS_TO_CACHE = [
   './',
   './manifest.webmanifest',
