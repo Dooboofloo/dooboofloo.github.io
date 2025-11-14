@@ -185,6 +185,7 @@
                 cell.addEventListener('touchstart', e => { e.preventDefault(); handleDown(e.touches[0]); });
                 cell.addEventListener('touchend',   e => { e.preventDefault(); handleUp(e.changedTouches[0]); });
                 cell.addEventListener('touchcancel', e => { e.preventDefault(); handleLeave(); });
+                cell.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.changedTouches[0]); });
             });
         </script>
     </body>
