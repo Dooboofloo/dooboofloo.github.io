@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="theme-color" content="#ffffff">
+        
+        <title>Mana Tracker</title>
+        <link rel="manifest" href="manifest.json">
+
+        <style>
+            @font-face {
+                font-family: 'MTGFont';
+                src: url("beleren-bold_P1.01.ttf");
+            }
+
+            html, body {
+                height: 100%;
+                margin: 0;
+            }
+            
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                height: 100vh;
+                width: 100vw;
+                gap: 0;
+            }
+
+            .cell {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                user-select: none;
+                box-sizing: border-box;
+                border: none;
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+                font-family: 'MTGFont', system-ui;
+                font-size: 13vh;
+                touch-action: manipulation;
+            }
+
+            .mana_icon {
+                position: absolute;
+                bottom: 5%;
+                left: 50%;
+                transform: translateX(-50%);
+                height: 20%;
+                pointer-events: none;
+            }
+
+            .cell:nth-child(1) { background: hsl(59, 88.79%, 86.08%); }
+            .cell:nth-child(2) { background: hsl(203, 87.66%, 73.79%); }
+            .cell:nth-child(3) { background: hsl(16, 8.6%, 57.03%); }
+            .cell:nth-child(4) { background: hsl(18, 79.57%, 70.52%); }
+            .cell:nth-child(5) { background: hsl(134, 36.94%, 65.04%); }
+            .cell:nth-child(6) { background: hsl(11, 9.09%, 72%); }
+
+            .highlight-top, .highlight-bottom {
+                position: absolute;
+                left: 0;
+                width: 100%;
+                height: 50%;
+                opacity: 0;
+                transition: opacity 0.1s ease-out;
+                pointer-events: none;
+                background: rgba(255, 255, 255, 0.6);
+            }
+
+            .highlight-top { top: 0; }
+            .highlight-bottom { bottom: 0; }
+
+            body { overflow: hidden;}
+        </style>
+    </head>
+
+    <body>
+        <div class="grid">
+            <div class="cell">0<img class="mana_icon" src="MTG_W.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+            <div class="cell">0<img class="mana_icon" src="MTG_U.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+            <div class="cell">0<img class="mana_icon" src="MTG_B.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+            <div class="cell">0<img class="mana_icon" src="MTG_R.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+            <div class="cell">0<img class="mana_icon" src="MTG_G.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+            <div class="cell">0<img class="mana_icon" src="MTG_C.svg"><div class="highlight-top"></div><div class="highlight-bottom"></div></div>
+        </div>
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .catch(err => console.error('SW fail:', err));
+            }
+
+            let activeCell = null;
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                const topOverlay = cell.querySelector('.highlight-top');
+                const bottomOverlay = cell.querySelector('.highlight-bottom');
+                let holdTimeout = null;
+                let isHolding = false;
+
+                const handleDown = e => {
+                    activeCell = cell;
+                    const rect = cell.getBoundingClientRect();
+                    const relativeY = e.clientY - rect.top;
+                    const midY = rect.height / 2;
+
+                    if (relativeY < midY) {
+                        topOverlay.style.opacity = 1;
+                    } else {
+                        bottomOverlay.style.opacity = 1;
+
+                        // Only trigger hold reset if held in bottom half
+                        holdTimeout = setTimeout(() => {
+                            cell.childNodes[0].textContent = 0;
+                            bottomOverlay.style.opacity = 0;
+                            isHolding = true;
+                        }, 600);
+                    }
+                };
+
+                const handleUp = e => {
+                    // Only trigger if this is the same cell we started on
+                    if (activeCell !== cell) {
+                        topOverlay.style.opacity = 0;
+                        bottomOverlay.style.opacity = 0;
+                        return;
+                    }
+
+                    clearTimeout(holdTimeout);
+                    const rect = cell.getBoundingClientRect();
+                    const relativeY = e.clientY - rect.top;
+                    const midY = rect.height / 2;
+                    const current = parseInt(cell.childNodes[0].textContent, 10) || 0;
+
+                    if (!isHolding) {
+                        if (relativeY < midY) {
+                            cell.childNodes[0].textContent = current + 1;
+                            topOverlay.style.opacity = 0;
+                        } else {
+                        if (current > 0) cell.childNodes[0].textContent = current - 1;
+                            bottomOverlay.style.opacity = 0;
+                        }
+                    }
+                    isHolding = false;
+                    activeCell = null;
+                };
+
+                const handleLeave = () => {
+                    clearTimeout(holdTimeout);
+                    topOverlay.style.opacity = 0;
+                    bottomOverlay.style.opacity = 0;
+                    activeCell = null;
+                };
+
+                cell.addEventListener('mousedown', handleDown);
+                cell.addEventListener('mouseup', handleUp);
+                cell.addEventListener('mouseleave', handleLeave);
+                
+                cell.addEventListener('touchstart', e => { e.preventDefault(); handleDown(e.touches[0]); });
+                cell.addEventListener('touchend',   e => { e.preventDefault(); handleUp(e.changedTouches[0]); });
+                cell.addEventListener('touchcancel', e => { e.preventDefault(); handleLeave(); });
+            });
+        </script>
+    </body>
+</html>
