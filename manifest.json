@@ -1,6 +1,6 @@
 {
   "name": "Mana Tracker",
-  "short_name": "Mana",
+  "short_name": "Mana Tracker",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
